@@ -56,13 +56,17 @@ def _smtp_configured() -> bool:
     )
 
 
+def _email_delivery_available() -> bool:
+    return _smtp_configured()
+
+
 def _magic_login_url(token: str) -> str:
     return f"{_public_frontend_url()}/login?{urlencode({'token': token})}"
 
 
 def _send_magic_link_email(email: str, token: str) -> None:
-    if not _smtp_configured():
-        return
+    if not _email_delivery_available():
+        raise RuntimeError("Email delivery is not configured")
 
     link = _magic_login_url(token)
     message = EmailMessage()
@@ -141,6 +145,10 @@ def get_current_user(
 @router.post("/request-link", response_model=schemas.AuthLinkResponse)
 def request_link(data: schemas.AuthLinkRequest, db: DBSession = Depends(get_db)):
     email = _normalize_email(data.email)
+    dev_tokens_enabled = _env_bool("BJJ_DEV_AUTH_TOKENS")
+    if not dev_tokens_enabled and not _email_delivery_available():
+        raise HTTPException(status_code=503, detail="Email login is not configured")
+
     request_window_minutes = max(
         1,
         _env_int("BJJ_AUTH_REQUEST_WINDOW_MINUTES", DEFAULT_REQUEST_WINDOW_MINUTES),
@@ -170,13 +178,14 @@ def request_link(data: schemas.AuthLinkRequest, db: DBSession = Depends(get_db))
     db.add(token)
     db.commit()
     db.refresh(token)
-    try:
-        _send_magic_link_email(email, token.token)
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail="Could not send sign-in email") from exc
+    if _email_delivery_available():
+        try:
+            _send_magic_link_email(email, token.token)
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail="Could not send sign-in email") from exc
     return {
         "message": SAFE_LINK_MESSAGE,
-        "dev_token": token.token if _env_bool("BJJ_DEV_AUTH_TOKENS") else None,
+        "dev_token": token.token if dev_tokens_enabled else None,
     }
 
 

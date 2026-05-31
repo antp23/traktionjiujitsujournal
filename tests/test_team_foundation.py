@@ -310,15 +310,16 @@ class TeamFoundationTests(unittest.TestCase):
         )
         self.assertEqual(me_response.status_code, 401)
 
-    def test_dev_token_is_hidden_unless_enabled(self):
+    def test_request_link_requires_email_delivery_when_dev_tokens_are_disabled(self):
         response = self.client.post(
             "/auth/request-link",
             json={"email": "athlete@example.com"},
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIsNone(response.json()["dev_token"])
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["detail"], "Email login is not configured")
 
+    def test_dev_token_is_returned_when_enabled(self):
         os.environ["BJJ_DEV_AUTH_TOKENS"] = "true"
         dev_response = self.client.post(
             "/auth/request-link",

@@ -50,10 +50,11 @@ export default function Login() {
       setDevToken(response.data.dev_token || "");
       setToken(response.data.dev_token || "");
       setMessage(response.data.dev_token
-        ? "Dev login token created."
-        : response.data.message || "If this email is allowed, a sign-in link will be sent.");
-    } catch {
-      setError("Could not create a login link. Check the backend and try again.");
+        ? "Development login token created."
+        : "Check your email for a sign-in link.");
+    } catch (requestError) {
+      const detail = requestError.response?.data?.detail;
+      setError(detail || "Could not send a sign-in link. Try again in a minute.");
     } finally {
       setBusy(false);
     }
@@ -80,7 +81,7 @@ export default function Login() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-purple-700">BJJ Tracker</p>
           <h1 className="text-2xl font-bold text-gray-950 mt-1">Sign in</h1>
-          <p className="text-sm text-gray-500 mt-1">Request a sign-in link for your private training journal. Local pilots may show a dev token below.</p>
+          <p className="text-sm text-gray-500 mt-1">Enter your email and we’ll send a private sign-in link.</p>
         </div>
 
         {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
@@ -112,23 +113,25 @@ export default function Login() {
           </div>
         )}
 
-        <form onSubmit={consume} className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700" htmlFor="token">Token</label>
-          <div className="relative">
-            <KeyRound className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-            <input
-              id="token"
-              value={token}
-              onChange={(event) => setToken(event.target.value)}
-              placeholder="Paste token from sign-in link"
-              className="w-full rounded-lg pl-9 pr-3 py-2 text-sm"
-              required
-            />
-          </div>
-          <button disabled={busy} className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-sm font-medium rounded-lg px-4 py-2">
-            Continue
-          </button>
-        </form>
+        {devToken && (
+          <form onSubmit={consume} className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700" htmlFor="token">Development token</label>
+            <div className="relative">
+              <KeyRound className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+              <input
+                id="token"
+                value={token}
+                onChange={(event) => setToken(event.target.value)}
+                placeholder="Paste token from sign-in link"
+                className="w-full rounded-lg pl-9 pr-3 py-2 text-sm"
+                required
+              />
+            </div>
+            <button disabled={busy} className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-sm font-medium rounded-lg px-4 py-2">
+              Continue
+            </button>
+          </form>
+        )}
 
         <p className="text-xs text-gray-500">
           Joining from an invite? <Link className="text-purple-700 hover:text-purple-600 font-medium" to="/join">Enter invite code</Link>
