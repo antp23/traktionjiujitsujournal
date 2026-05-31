@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: bjj-tracker-api
+    runtime: python
+    rootDir: backend
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    disk:
+      name: bjj-tracker-data
+      mountPath: /var/lib/bjj-tracker
+      sizeGB: 1
+    envVars:
+      - key: BJJ_SQLITE_PATH
+        value: /var/lib/bjj-tracker/bjj.db
+      - key: BJJ_DEV_AUTH_TOKENS
+        value: false
+      - key: BJJ_ENABLE_WHATSAPP_CAPTURE
+        value: false
+      - key: BJJ_AUTH_MAGIC_LINK_TTL_MINUTES
+        value: 15
+      - key: BJJ_AUTH_SESSION_TTL_HOURS
+        value: 720
+      - key: BJJ_AUTH_REQUEST_LIMIT
+        value: 5
+      - key: BJJ_AUTH_REQUEST_WINDOW_MINUTES
+        value: 15
+      - key: BJJ_CORS_ORIGINS
+        sync: false
+      - key: BJJ_FRONTEND_URL
+        sync: false
+      - key: BJJ_EMAIL_FROM
+        sync: false
+      - key: BJJ_SMTP_HOST
+        sync: false
+      - key: BJJ_SMTP_PORT
+        sync: false
+      - key: BJJ_SMTP_USERNAME
+        sync: false
+      - key: BJJ_SMTP_PASSWORD
+        sync: false
+      - key: BJJ_SMTP_USE_SSL
+        value: true
+      - key: BJJ_SMTP_USE_TLS
+        value: false
