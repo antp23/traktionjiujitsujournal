@@ -26,6 +26,8 @@ services:
         value: 5
       - key: BJJ_AUTH_REQUEST_WINDOW_MINUTES
         value: 15
+      - key: PYTHON_VERSION
+        value: 3.12.8
       - key: BJJ_CORS_ORIGINS
         sync: false
       - key: BJJ_FRONTEND_URL
