@@ -1,18 +1,19 @@
-from typing import List
+"""Coach sharing: athletes deliberately share a goal or note into a thread;
+coaches reply and can pin replies as durable coach notes."""
 from datetime import datetime
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DBSession, selectinload
 
-import models
-import schemas
-from database import get_db
-from routers.auth import get_current_user
+from app import models, schemas
+from app.api.deps import get_current_user
+from app.db import get_db
 
 router = APIRouter(prefix="/sharing", tags=["sharing"])
 
 
-def _current_membership(db: DBSession, user_id: str):
+def _active_membership(db: DBSession, user_id: str) -> models.Membership | None:
     return (
         db.query(models.Membership)
         .filter(
@@ -24,6 +25,7 @@ def _current_membership(db: DBSession, user_id: str):
 
 
 def _can_see_thread(db: DBSession, user: models.User, thread: models.ShareThread) -> bool:
+    """Thread owners and workspace owners/coaches can see a thread."""
     if thread.owner_user_id == user.user_id:
         return True
     membership = (
@@ -39,12 +41,14 @@ def _can_see_thread(db: DBSession, user: models.User, thread: models.ShareThread
     return membership is not None
 
 
-def _assert_owned_source(
-    db: DBSession,
-    user: models.User,
-    source_type: str,
-    source_id: str,
-):
+def _claim_shared_source(
+    db: DBSession, user: models.User, source_type: str, source_id: str
+) -> None:
+    """Verify the source belongs to the sharer and mark it shared.
+
+    Goals flip to visibility=shared. Notes with no owner (pre-auth legacy
+    rows) are claimed by the sharer.
+    """
     if source_type == "goal":
         goal = (
             db.query(models.Goal)
@@ -71,11 +75,11 @@ def create_thread(
     current_user: models.User = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    membership = _current_membership(db, current_user.user_id)
+    membership = _active_membership(db, current_user.user_id)
     if not membership:
         raise HTTPException(status_code=400, detail="Join a workspace before sharing")
 
-    _assert_owned_source(db, current_user, data.source_type, data.source_id)
+    _claim_shared_source(db, current_user, data.source_type, data.source_id)
     thread = models.ShareThread(
         workspace_id=membership.workspace_id,
         owner_user_id=current_user.user_id,
@@ -115,21 +119,14 @@ def inbox(
         for membership in memberships
         if membership.role in ("owner", "coach")
     ]
-    if coach_workspace_ids:
-        return (
-            db.query(models.ShareThread)
-            .options(selectinload(models.ShareThread.messages))
-            .filter(models.ShareThread.workspace_id.in_(coach_workspace_ids))
-            .order_by(models.ShareThread.updated_at.desc())
-            .all()
-        )
-    return (
-        db.query(models.ShareThread)
-        .options(selectinload(models.ShareThread.messages))
-        .filter(models.ShareThread.owner_user_id == current_user.user_id)
-        .order_by(models.ShareThread.updated_at.desc())
-        .all()
+    query = db.query(models.ShareThread).options(
+        selectinload(models.ShareThread.messages)
     )
+    if coach_workspace_ids:
+        query = query.filter(models.ShareThread.workspace_id.in_(coach_workspace_ids))
+    else:
+        query = query.filter(models.ShareThread.owner_user_id == current_user.user_id)
+    return query.order_by(models.ShareThread.updated_at.desc()).all()
 
 
 @router.post(
@@ -143,7 +140,11 @@ def create_message(
     current_user: models.User = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    thread = db.query(models.ShareThread).filter(models.ShareThread.thread_id == thread_id).first()
+    thread = (
+        db.query(models.ShareThread)
+        .filter(models.ShareThread.thread_id == thread_id)
+        .first()
+    )
     if not thread or not _can_see_thread(db, current_user, thread):
         raise HTTPException(status_code=404, detail="Thread not found")
     message = models.ThreadMessage(

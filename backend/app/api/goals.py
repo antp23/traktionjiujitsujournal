@@ -1,13 +1,13 @@
+"""Training goals. Deliberately no DELETE — goals are archived via status."""
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session as DBSession
 
-import models
-import schemas
-from database import get_db
-from routers.auth import get_current_user
+from app import models, schemas
+from app.api.deps import apply_partial_update, get_current_user, get_owned_or_404
+from app.db import get_db
 
 router = APIRouter(prefix="/goals", tags=["goals"])
 
@@ -45,18 +45,11 @@ def update_goal(
     current_user: models.User = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    goal = (
-        db.query(models.Goal)
-        .filter(
-            models.Goal.goal_id == goal_id,
-            models.Goal.owner_user_id == current_user.user_id,
-        )
-        .first()
+    goal = get_owned_or_404(
+        db, models.Goal, models.Goal.goal_id, goal_id,
+        current_user.user_id, "Goal not found",
     )
-    if not goal:
-        raise HTTPException(status_code=404, detail="Goal not found")
-    for field, value in data.model_dump(exclude_unset=True).items():
-        setattr(goal, field, value)
+    apply_partial_update(goal, data)
     goal.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(goal)

@@ -1,24 +1,24 @@
+"""Meta WhatsApp webhook (feature-flagged capture into the private journal)."""
 import hashlib
 import hmac
 import json
-import os
 import re
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Iterator, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session as DBSession
 
-import models
-from database import get_db
-from routers.parse import parse_text_to_private_journal
+from app import config, models
+from app.db import get_db
+from app.services.quicklog import parse_text_to_private_journal
 
 router = APIRouter(prefix="/webhooks/whatsapp", tags=["whatsapp"])
 
 
 def _require_capture_enabled() -> None:
-    if os.getenv("BJJ_ENABLE_WHATSAPP_CAPTURE", "").lower() != "true":
+    if not config.whatsapp_capture_enabled():
         raise HTTPException(status_code=404, detail="WhatsApp capture is disabled")
 
 
@@ -30,7 +30,7 @@ def _normalize_phone(phone: Optional[str]) -> str:
 
 
 def _verify_meta_signature(raw_body: bytes, signature_header: Optional[str]) -> None:
-    app_secret = os.getenv("BJJ_META_APP_SECRET")
+    app_secret = config.meta_app_secret()
     if not app_secret:
         raise HTTPException(status_code=500, detail="Meta app secret is not configured")
     if not signature_header or not signature_header.startswith("sha256="):
@@ -42,7 +42,7 @@ def _verify_meta_signature(raw_body: bytes, signature_header: Optional[str]) -> 
         raise HTTPException(status_code=401, detail="Invalid Meta signature")
 
 
-def _iter_text_messages(payload: dict[str, Any]):
+def _iter_text_messages(payload: dict[str, Any]) -> Iterator[dict[str, Any]]:
     for entry in payload.get("entry", []):
         for change in entry.get("changes", []):
             value = change.get("value", {})
@@ -70,8 +70,12 @@ def verify_meta_webhook(
     challenge: Optional[str] = Query(default=None, alias="hub.challenge"),
 ):
     _require_capture_enabled()
-    configured_token = os.getenv("BJJ_META_VERIFY_TOKEN")
-    if mode == "subscribe" and configured_token and hmac.compare_digest(verify_token or "", configured_token):
+    configured_token = config.meta_verify_token()
+    if (
+        mode == "subscribe"
+        and configured_token
+        and hmac.compare_digest(verify_token or "", configured_token)
+    ):
         return challenge or ""
     raise HTTPException(status_code=403, detail="Invalid webhook verification token")
 
@@ -87,12 +91,10 @@ async def receive_meta_webhook(request: Request, db: DBSession = Depends(get_db)
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=400, detail="Invalid JSON payload") from exc
 
-    processed = 0
-    duplicates = 0
-    unmatched = 0
+    processed = duplicates = unmatched = 0
 
     for incoming in _iter_text_messages(payload):
-        existing = (
+        already_seen = (
             db.query(models.InboundMessage)
             .filter(
                 models.InboundMessage.provider == "meta",
@@ -100,7 +102,7 @@ async def receive_meta_webhook(request: Request, db: DBSession = Depends(get_db)
             )
             .first()
         )
-        if existing:
+        if already_seen:
             duplicates += 1
             continue
 

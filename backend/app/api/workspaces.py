@@ -1,22 +1,29 @@
+"""Gym workspace: bootstrap, invites, enrollment, athlete profile."""
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DBSession
 
-import models
-import schemas
-from database import get_db
-from routers.auth import get_current_user
+from app import models, schemas, security
+from app.api.deps import get_current_user
+from app.db import get_db
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 
 
-def _normalize_email(email: str) -> str:
-    return email.strip().lower()
-
-
 def _new_invite_code() -> str:
     return secrets.token_urlsafe(8)
+
+
+def _active_invite(db: DBSession, workspace_id: str) -> models.InviteLink | None:
+    return (
+        db.query(models.InviteLink)
+        .filter(
+            models.InviteLink.workspace_id == workspace_id,
+            models.InviteLink.active.is_(True),
+        )
+        .first()
+    )
 
 
 @router.post("/bootstrap", response_model=schemas.WorkspaceBootstrapResponse)
@@ -24,8 +31,10 @@ def bootstrap_workspace(
     data: schemas.WorkspaceBootstrapRequest,
     db: DBSession = Depends(get_db),
 ):
+    """Create (or idempotently return) the single gym workspace, its owner
+    account, owner membership, and an active invite code."""
     workspace = db.query(models.GymWorkspace).first()
-    owner_email = _normalize_email(data.owner_email)
+    owner_email = security.normalize_email(data.owner_email)
     owner = db.query(models.User).filter(models.User.email == owner_email).first()
     if not owner:
         owner = models.User(email=owner_email)
@@ -57,23 +66,16 @@ def bootstrap_workspace(
         db.add(membership)
         db.flush()
 
-    invite = (
-        db.query(models.InviteLink)
-        .filter(
-            models.InviteLink.workspace_id == workspace.workspace_id,
-            models.InviteLink.active.is_(True),
-        )
-        .first()
-    )
+    invite = _active_invite(db, workspace.workspace_id)
     if not invite:
-        invite = models.InviteLink(workspace_id=workspace.workspace_id, code=_new_invite_code())
+        invite = models.InviteLink(
+            workspace_id=workspace.workspace_id, code=_new_invite_code()
+        )
         db.add(invite)
 
     db.commit()
-    db.refresh(workspace)
-    db.refresh(owner)
-    db.refresh(membership)
-    db.refresh(invite)
+    for row in (workspace, owner, membership, invite):
+        db.refresh(row)
     return {
         "workspace": workspace,
         "owner": owner,
@@ -108,14 +110,7 @@ def current_workspace(
 
     invite = None
     if membership.role in ("owner", "coach"):
-        invite = (
-            db.query(models.InviteLink)
-            .filter(
-                models.InviteLink.workspace_id == membership.workspace_id,
-                models.InviteLink.active.is_(True),
-            )
-            .first()
-        )
+        invite = _active_invite(db, membership.workspace_id)
     return {
         "workspace": membership.workspace,
         "membership": membership,
@@ -131,7 +126,10 @@ def join_workspace(
 ):
     invite = (
         db.query(models.InviteLink)
-        .filter(models.InviteLink.code == data.invite_code, models.InviteLink.active.is_(True))
+        .filter(
+            models.InviteLink.code == data.invite_code,
+            models.InviteLink.active.is_(True),
+        )
         .first()
     )
     if not invite:
