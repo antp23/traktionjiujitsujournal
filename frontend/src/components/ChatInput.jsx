@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Loader2, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
-import { parseQuickLog } from "../api";
+import { parseQuickLog } from "../lib/api";
 
 const HINTS = [
   "trained 1hr no gi, worked guard passing",

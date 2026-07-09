@@ -1,21 +1,13 @@
-import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { consumeAuthLink, getMe } from "./api";
-
-const SESSION_TOKEN_KEY = "bjj_session_token";
-
-const AuthContext = createContext(null);
-
-export function getSessionToken() {
-  return localStorage.getItem(SESSION_TOKEN_KEY);
-}
-
-export function setSessionToken(token) {
-  localStorage.setItem(SESSION_TOKEN_KEY, token);
-}
-
-export function clearSessionToken() {
-  localStorage.removeItem(SESSION_TOKEN_KEY);
-}
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AuthContext } from "./authContext";
+import {
+  clearSessionToken,
+  consumeAuthLink,
+  getMe,
+  getSessionToken,
+  logout,
+  setSessionToken,
+} from "./api";
 
 export function AuthProvider({ children }) {
   const [sessionToken, setSessionTokenState] = useState(() => getSessionToken());
@@ -24,11 +16,15 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(Boolean(sessionToken));
 
+  const resetState = useCallback(() => {
+    setUser(null);
+    setMemberships([]);
+    setProfile(null);
+  }, []);
+
   const refreshMe = useCallback(async () => {
     if (!getSessionToken()) {
-      setUser(null);
-      setMemberships([]);
-      setProfile(null);
+      resetState();
       setLoading(false);
       return null;
     }
@@ -43,14 +39,12 @@ export function AuthProvider({ children }) {
     } catch (error) {
       clearSessionToken();
       setSessionTokenState(null);
-      setUser(null);
-      setMemberships([]);
-      setProfile(null);
+      resetState();
       throw error;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [resetState]);
 
   useEffect(() => {
     if (sessionToken) {
@@ -68,12 +62,12 @@ export function AuthProvider({ children }) {
   }, [refreshMe]);
 
   const signOut = useCallback(() => {
+    // Revoke the server-side session too; local cleanup happens regardless.
+    logout().catch(() => {});
     clearSessionToken();
     setSessionTokenState(null);
-    setUser(null);
-    setMemberships([]);
-    setProfile(null);
-  }, []);
+    resetState();
+  }, [resetState]);
 
   const value = useMemo(() => ({
     sessionToken,
@@ -87,13 +81,5 @@ export function AuthProvider({ children }) {
     signOut,
   }), [consumeToken, loading, memberships, profile, refreshMe, sessionToken, signOut, user]);
 
-  return createElement(AuthContext.Provider, { value }, children);
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used inside AuthProvider");
-  }
-  return context;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

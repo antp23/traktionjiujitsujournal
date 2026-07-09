@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { LockKeyhole, MessageSquare, Plus, Target } from "lucide-react";
-import { createGoal, createShareThread, getGoals, updateGoal } from "../api";
+import { createGoal, createShareThread, getGoals, updateGoal } from "../lib/api";
 import LoadingSpinner from "../components/LoadingSpinner";
 import EmptyState from "../components/EmptyState";
 

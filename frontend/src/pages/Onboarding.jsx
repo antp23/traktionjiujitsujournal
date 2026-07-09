@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { updateProfile } from "../api";
-import { useAuth } from "../auth";
+import { updateProfile } from "../lib/api";
+import { useAuth } from "../lib/authContext";
 
 const BELTS = ["white", "blue", "purple", "brown", "black"];
 

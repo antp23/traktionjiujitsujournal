@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { getRolls, getRollStats } from "../api";
+import { useCallback, useState } from "react";
+import { getRolls, getRollStats } from "../lib/api";
+import { useAsyncData } from "../hooks/useAsyncData";
 import Badge from "../components/Badge";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { Swords, TrendingUp, Search } from "lucide-react";
@@ -8,24 +8,21 @@ import { motion } from "framer-motion";
 
 const OUTCOME_BADGE = { submission_win: "win", points_win: "win", submission_loss: "loss", points_loss: "loss", draw: "draw" };
 const OUTCOME_LABEL = { submission_win: "Sub Win", points_win: "Pts Win", submission_loss: "Sub Loss", points_loss: "Pts Loss", draw: "Draw" };
-const OUTCOME_COLOR = { submission_win: "text-green-400", points_win: "text-green-400", submission_loss: "text-red-400", points_loss: "text-red-400", draw: "text-gray-500" };
 
 export default function Rolls() {
-  const [rolls, setRolls] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [partnerFilter, setPartnerFilter] = useState("");
 
-  useEffect(() => {
-    const params = {};
-    if (partnerFilter) params.partner = partnerFilter;
-    Promise.all([getRolls(params), getRollStats()])
-      .then(([r, s]) => { setRolls(r.data || []); setStats(s.data || null); })
-      .finally(() => setLoading(false));
+  const loader = useCallback(async () => {
+    const params = partnerFilter ? { partner: partnerFilter } : {};
+    const [rollsResponse, statsResponse] = await Promise.all([getRolls(params), getRollStats()]);
+    return { rolls: rollsResponse.data || [], stats: statsResponse.data || null };
   }, [partnerFilter]);
+  const { data, loading, error } = useAsyncData(loader, { fallbackError: "Failed to load rolls" });
 
   if (loading) return <LoadingSpinner />;
+  if (error) return <div className="bg-red-900/20 border border-red-500/30 text-red-400 p-4 rounded-xl text-center">{error}</div>;
 
+  const { rolls, stats } = data;
   const winRate = stats?.total_rolls > 0 ? Math.round((stats.wins / stats.total_rolls) * 100) : 0;
 
   return (

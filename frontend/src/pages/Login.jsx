@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { KeyRound, Mail } from "lucide-react";
-import { requestAuthLink } from "../api";
-import { useAuth } from "../auth";
+import { requestAuthLink } from "../lib/api";
+import { useAuth } from "../lib/authContext";
 
 function nextPath(searchParams, fallback = "/") {
   const next = searchParams.get("next");

@@ -1,14 +1,30 @@
 import axios from "axios";
 
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+const SESSION_TOKEN_KEY = "bjj_session_token";
+
+export function getSessionToken() {
+  return localStorage.getItem(SESSION_TOKEN_KEY);
+}
+
+export function setSessionToken(token) {
+  localStorage.setItem(SESSION_TOKEN_KEY, token);
+}
+
+export function clearSessionToken() {
+  localStorage.removeItem(SESSION_TOKEN_KEY);
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000",
+  baseURL: API_BASE_URL,
   headers: import.meta.env.VITE_API_KEY
     ? { "x-api-key": import.meta.env.VITE_API_KEY }
     : undefined,
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("bjj_session_token");
+  const token = getSessionToken();
   if (token) {
     config.headers = config.headers || {};
     config.headers["x-session-token"] = token;
@@ -16,9 +32,16 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Normalize an axios failure into something safe to render.
+export function apiErrorMessage(error, fallback = "Something went wrong. Try again.") {
+  const detail = error?.response?.data?.detail;
+  return typeof detail === "string" && detail ? detail : fallback;
+}
+
 // Auth and enrollment
 export const requestAuthLink = (email) => api.post("/auth/request-link", { email });
 export const consumeAuthLink = (token) => api.post("/auth/consume-link", { token });
+export const logout = () => api.post("/auth/logout");
 export const getMe = () => api.get("/auth/me");
 export const bootstrapWorkspace = (data) => api.post("/workspaces/bootstrap", data);
 export const getCurrentWorkspace = () => api.get("/workspaces/current");
@@ -73,7 +96,8 @@ export const updateGoal = (id, data) => api.put(`/goals/${id}`, data);
 // Sharing
 export const createShareThread = (data) => api.post("/sharing/threads", data);
 export const getSharedInbox = () => api.get("/sharing/inbox");
-export const createThreadMessage = (threadId, data) => api.post(`/sharing/threads/${threadId}/messages`, data);
+export const createThreadMessage = (threadId, data) =>
+  api.post(`/sharing/threads/${threadId}/messages`, data);
 export const pinThreadMessage = (messageId) => api.post(`/sharing/messages/${messageId}/pin`);
 
 // Dashboard
@@ -83,6 +107,7 @@ export const getDashboard = () => api.get("/dashboard");
 export const getOuraStatus = () => api.get("/oura/status");
 export const syncOura = (days = 30) => api.post(`/oura/sync?days=${days}`);
 export const getOuraData = (days = 60) => api.get(`/oura/data?days=${days}`);
+export const ouraConnectUrl = () => `${API_BASE_URL}/oura/auth`;
 
 // Quick Log
 export const parseQuickLog = (text) => api.post("/parse", { text });
