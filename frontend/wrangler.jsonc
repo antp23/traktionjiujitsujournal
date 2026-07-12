@@ -1,0 +1,12 @@
+// Cloudflare Workers (static assets) deployment for the frontend.
+// The Cloudflare project "bjj-notebook" builds this directory with
+// `npm run build` and deploys via `npx wrangler deploy`.
+{
+  "name": "bjj-notebook",
+  "compatibility_date": "2026-07-01",
+  "assets": {
+    "directory": "./dist",
+    // Serve index.html for client-side routes (/sessions, /login, ...).
+    "not_found_handling": "single-page-application"
+  }
+}
