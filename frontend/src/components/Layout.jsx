@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getCurrentRank } from "../api";
-import { useAuth } from "../auth";
+import { getCurrentRank } from "../lib/api";
+import { useAuth } from "../lib/authContext";
 import {
   BookOpen,
   Building2,

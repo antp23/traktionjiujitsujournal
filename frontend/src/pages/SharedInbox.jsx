@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Inbox, Pin, Send, ShieldCheck } from "lucide-react";
-import { createThreadMessage, getSharedInbox, pinThreadMessage } from "../api";
+import { createThreadMessage, getSharedInbox, pinThreadMessage } from "../lib/api";
 import LoadingSpinner from "../components/LoadingSpinner";
 import EmptyState from "../components/EmptyState";
 

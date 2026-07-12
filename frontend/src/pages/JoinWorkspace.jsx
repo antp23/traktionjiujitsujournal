@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowRight, Building2 } from "lucide-react";
-import { getInvite, joinWorkspace } from "../api";
-import { useAuth } from "../auth";
+import { getInvite, joinWorkspace } from "../lib/api";
+import { useAuth } from "../lib/authContext";
 
 export default function JoinWorkspace() {
   const { code: pathCode } = useParams();

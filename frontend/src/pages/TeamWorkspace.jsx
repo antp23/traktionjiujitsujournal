@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Building2, Copy, Inbox, ShieldCheck, Target, UserRound, UserRoundPlus } from "lucide-react";
-import { getCurrentWorkspace } from "../api";
-import { useAuth } from "../auth";
+import { getCurrentWorkspace } from "../lib/api";
+import { useAuth } from "../lib/authContext";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 export default function TeamWorkspace() {

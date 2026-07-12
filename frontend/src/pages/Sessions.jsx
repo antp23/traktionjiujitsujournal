@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getSessions, getSessionStats } from '../api';
+import { getSessions, getSessionStats } from '../lib/api';
+import { useAsyncData } from '../hooks/useAsyncData';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Badge from '../components/Badge';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, ChevronRight, Plus, Filter, Zap } from 'lucide-react';
+import { Calendar, Clock, ChevronRight, Plus } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 const TYPES = ['all', 'gi', 'no-gi', 'open_mat', 'drilling', 'competition_prep'];
@@ -13,29 +14,19 @@ const TYPE_LABELS = { all: 'All', gi: 'Gi', 'no-gi': 'No-Gi', open_mat: 'Open Ma
 const ENERGY_COLORS = ['', 'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-lime-500', 'bg-green-500'];
 
 export default function Sessions() {
-  const [sessions, setSessions] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [typeFilter, setTypeFilter] = useState('all');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    Promise.all([getSessions(), getSessionStats()])
-      .then(([s, st]) => {
-        setSessions(s.data || []);
-        setStats(st.data || null);
-        setLoading(false);
-      })
-      .catch(err => {
-        setError(err.message || 'Failed to load sessions');
-        setLoading(false);
-      });
+  const loader = useCallback(async () => {
+    const [sessionsResponse, statsResponse] = await Promise.all([getSessions(), getSessionStats()]);
+    return { sessions: sessionsResponse.data || [], stats: statsResponse.data || null };
   }, []);
+  const { data, loading, error } = useAsyncData(loader, { fallbackError: 'Failed to load sessions' });
 
   if (loading) return <LoadingSpinner />;
   if (error) return <div className="bg-red-900/20 border border-red-500/30 text-red-400 p-4 rounded-xl text-center">{error}</div>;
 
+  const { sessions, stats } = data;
   const filtered = typeFilter === 'all' ? sessions : sessions.filter(s => s.session_type === typeFilter);
 
   return (
@@ -75,7 +66,7 @@ export default function Sessions() {
             key={t}
             onClick={() => setTypeFilter(t)}
             className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              typeFilter === t ? 'bg-purple-600 text-white' : 'bg-gray-50 text-gray-500 hover:text-white border border-gray-200'
+              typeFilter === t ? 'bg-purple-600 text-white' : 'bg-gray-50 text-gray-500 hover:text-gray-800 border border-gray-200'
             }`}
           >
             {TYPE_LABELS[t]}
@@ -133,7 +124,7 @@ export default function Sessions() {
                     </div>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-500 flex-shrink-0 transition-colors ml-2" />
+                <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-700 flex-shrink-0 transition-colors ml-2" />
               </div>
               {session.notes && (
                 <p className="text-gray-400 text-xs mt-2 pl-5 truncate">{session.notes}</p>

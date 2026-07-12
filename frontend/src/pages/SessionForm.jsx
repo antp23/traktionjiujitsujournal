@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { createSession, updateSession, getSession } from "../api";
+import { createSession, updateSession, getSession } from "../lib/api";
 import LoadingSpinner from "../components/LoadingSpinner";
 
 const TYPES = ["gi", "no-gi", "open_mat", "drilling", "competition_prep"];

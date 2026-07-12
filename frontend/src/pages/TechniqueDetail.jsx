@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getTechnique, deleteTechnique, updateTechnique } from "../api";
+import { getTechnique, deleteTechnique, updateTechnique } from "../lib/api";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Badge from "../components/Badge";
 import ConfirmModal from "../components/ConfirmModal";

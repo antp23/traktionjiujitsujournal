@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Building2, Copy, KeyRound } from "lucide-react";
-import { bootstrapWorkspace } from "../api";
+import { bootstrapWorkspace } from "../lib/api";
 
 export default function SetupWorkspace() {
   const [form, setForm] = useState({

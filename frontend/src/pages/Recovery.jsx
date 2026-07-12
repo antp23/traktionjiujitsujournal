@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { getOuraStatus, getOuraData, syncOura, getSessions } from "../api";
+import { getOuraStatus, getOuraData, syncOura, getSessions, ouraConnectUrl } from "../lib/api";
 import { Activity, Heart, Moon, Zap, RefreshCw, Wifi, WifiOff } from "lucide-react";
 
 function ScoreBadge({ value, label, color }) {
@@ -118,7 +118,7 @@ export default function Recovery() {
       <WifiOff className="w-12 h-12 text-gray-300 mx-auto mb-4" />
       <h2 className="text-gray-800 font-semibold text-lg mb-2">Oura Not Connected</h2>
       <p className="text-gray-400 text-sm mb-6">Connect your Oura ring to see recovery data alongside your training.</p>
-      <a href="http://localhost:8000/oura/auth"
+      <a href={ouraConnectUrl()}
         className="inline-block px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-xl transition-colors">
         Connect Oura Ring
       </a>

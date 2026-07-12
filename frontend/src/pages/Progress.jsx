@@ -1,36 +1,25 @@
-import { useEffect, useState } from 'react';
-import { getDashboard, getSessionStats, getRollStats } from '../api';
+import { useCallback } from 'react';
+import { getDashboard, getSessionStats, getRollStats } from '../lib/api';
+import { useAsyncData } from '../hooks/useAsyncData';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { motion } from 'framer-motion';
 import { Target, Flame, Award, TrendingUp } from 'lucide-react';
 
 export default function Progress() {
-  const [dash, setDash] = useState(null);
-  const [sessionStats, setSessionStats] = useState(null);
-  const [rollStats, setRollStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    Promise.all([getDashboard(), getSessionStats(), getRollStats()])
-      .then(([d, s, r]) => {
-        setDash(d.data);
-        setSessionStats(s.data);
-        setRollStats(r.data);
-        setLoading(false);
-      })
-      .catch(err => {
-        setError(err.message || "Failed to load progress data");
-        setLoading(false);
-      });
+  const loader = useCallback(async () => {
+    const [dashboard, sessionStats, rollStats] = await Promise.all([
+      getDashboard(), getSessionStats(), getRollStats(),
+    ]);
+    return { dash: dashboard.data, sessionStats: sessionStats.data, rollStats: rollStats.data };
   }, []);
+  const { data, loading, error } = useAsyncData(loader, { fallbackError: 'Failed to load progress data' });
 
   if (loading) return <LoadingSpinner />;
-
   if (error) return (
     <div className="bg-red-900/20 border border-red-500/30 text-red-400 p-4 rounded-xl text-center">{error}</div>
   );
 
+  const { dash, sessionStats, rollStats } = data;
   const stats = dash?.session_stats || sessionStats || {};
   const rolls = rollStats || dash?.roll_stats || {};
   const total = stats.total_sessions || 0;
@@ -113,12 +102,12 @@ export default function Progress() {
               <p className="text-gray-500 text-xs">Total Rolls</p>
             </div>
             <div>
-              <p className="text-green-400 font-bold text-xl">{rolls.submissions_applied || 0}</p>
-              <p className="text-gray-500 text-xs">Subs Applied</p>
+              <p className="text-green-400 font-bold text-xl">{rolls.wins || 0}</p>
+              <p className="text-gray-500 text-xs">Wins</p>
             </div>
             <div>
-              <p className="text-red-400 font-bold text-xl">{rolls.submissions_received || 0}</p>
-              <p className="text-gray-500 text-xs">Subs Received</p>
+              <p className="text-red-400 font-bold text-xl">{rolls.losses || 0}</p>
+              <p className="text-gray-500 text-xs">Losses</p>
             </div>
           </div>
         </div>

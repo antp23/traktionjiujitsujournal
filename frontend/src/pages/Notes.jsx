@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { getNotes, createNote, updateNote, deleteNote, createShareThread } from "../api";
+import { getNotes, createNote, updateNote, deleteNote, createShareThread } from "../lib/api";
 import LoadingSpinner from "../components/LoadingSpinner";
 import EmptyState from "../components/EmptyState";
 import ConfirmModal from "../components/ConfirmModal";

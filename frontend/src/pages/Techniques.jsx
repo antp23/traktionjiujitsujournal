@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTechniques } from '../api';
+import { getTechniques } from '../lib/api';
+import { useAsyncData } from '../hooks/useAsyncData';
 import LoadingSpinner from '../components/LoadingSpinner';
 import Badge from '../components/Badge';
 import { motion } from 'framer-motion';
@@ -8,21 +9,14 @@ import { BookOpen, ChevronRight, Plus, Search } from 'lucide-react';
 
 const PROFICIENCY = ['learning', 'drilling', 'applying', 'sharp'];
 const PROFICIENCY_COLOR = { learning: 'bg-slate-600', drilling: 'bg-blue-500', applying: 'bg-purple-500', sharp: 'bg-green-500' };
-const PROFICIENCY_WIDTH = { learning: 'w-1/4', drilling: 'w-2/4', applying: 'w-3/4', sharp: 'w-full' };
 
 export default function Techniques() {
-  const [techniques, setTechniques] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [profFilter, setProfFilter] = useState('all');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    getTechniques()
-      .then(res => { setTechniques(res.data || []); setLoading(false); })
-      .catch(err => { setError(err.message || 'Failed to load techniques'); setLoading(false); });
-  }, []);
+  const loader = useCallback(async () => (await getTechniques()).data || [], []);
+  const { data: techniques, loading, error } = useAsyncData(loader, { fallbackError: 'Failed to load techniques' });
 
   if (loading) return <LoadingSpinner />;
   if (error) return <div className="bg-red-900/20 border border-red-500/30 text-red-400 p-4 rounded-xl">{error}</div>;
@@ -90,7 +84,7 @@ export default function Techniques() {
               key={p}
               onClick={() => setProfFilter(p)}
               className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
-                profFilter === p ? 'bg-purple-600 text-white' : 'bg-gray-50 border border-gray-200 text-gray-500 hover:text-white'
+                profFilter === p ? 'bg-purple-600 text-white' : 'bg-gray-50 border border-gray-200 text-gray-500 hover:text-gray-800'
               }`}
             >
               {p === 'all' ? 'All' : p.charAt(0).toUpperCase() + p.slice(1)}
@@ -141,7 +135,7 @@ export default function Techniques() {
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Badge label={tech.proficiency} variant={tech.proficiency} />
-                  <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-500 transition-colors" />
+                  <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-700 transition-colors" />
                 </div>
               </div>
               {tech.notes && (

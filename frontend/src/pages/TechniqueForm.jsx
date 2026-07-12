@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { createTechnique, updateTechnique, getTechnique } from "../api";
+import { createTechnique, updateTechnique, getTechnique } from "../lib/api";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { Plus, X } from "lucide-react";
 

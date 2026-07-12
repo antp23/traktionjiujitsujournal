@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { ArrowRight, BookOpen, CalendarDays, MessageSquare, NotebookPen, Plus, Target } from "lucide-react";
-import { getCurrentWorkspace, getDashboard } from "../api";
+import { getCurrentWorkspace, getDashboard } from "../lib/api";
 import Badge from "../components/Badge";
 import ChatInput from "../components/ChatInput";
 import LoadingSpinner from "../components/LoadingSpinner";
