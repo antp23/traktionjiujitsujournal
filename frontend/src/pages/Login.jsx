@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { KeyRound, Mail } from "lucide-react";
 import { requestAuthLink } from "../lib/api";
@@ -19,25 +19,16 @@ export default function Login() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const consumedQueryToken = useRef(false);
+  // Tokens are single-use, so the emailed link must NOT be consumed on page
+  // load: corporate email scanners prefetch links and would burn the token
+  // before the user arrives. We wait for an explicit button press instead.
+  const linkToken = searchParams.get("token") || "";
 
   useEffect(() => {
-    if (isAuthenticated && !searchParams.get("token")) {
+    if (isAuthenticated && !linkToken) {
       navigate(nextPath(searchParams), { replace: true });
     }
-  }, [isAuthenticated, navigate, searchParams]);
-
-  useEffect(() => {
-    const queryToken = searchParams.get("token");
-    if (!queryToken || consumedQueryToken.current) return;
-    consumedQueryToken.current = true;
-
-    setBusy(true);
-    consumeToken(queryToken)
-      .then(() => navigate(nextPath(searchParams), { replace: true }))
-      .catch(() => setError("That login token did not work. Request a new one and try again."))
-      .finally(() => setBusy(false));
-  }, [consumeToken, navigate, searchParams]);
+  }, [isAuthenticated, linkToken, navigate, searchParams]);
 
   const requestLink = async (event) => {
     event.preventDefault();
@@ -86,6 +77,15 @@ export default function Login() {
 
         {error && <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>}
         {message && <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">{message}</p>}
+
+        {linkToken && (
+          <form onSubmit={consume} className="space-y-3">
+            <p className="text-sm text-gray-700">You followed a sign-in link. Press continue to finish signing in.</p>
+            <button disabled={busy} className="w-full bg-purple-700 hover:bg-purple-600 disabled:opacity-60 text-white text-sm font-medium rounded-lg px-4 py-2">
+              {busy ? "Signing in..." : "Complete sign-in"}
+            </button>
+          </form>
+        )}
 
         <form onSubmit={requestLink} className="space-y-3">
           <label className="block text-sm font-medium text-gray-700" htmlFor="email">Email</label>
