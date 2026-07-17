@@ -1,6 +1,12 @@
 # BJJ Tracker
 
-Personal Brazilian Jiu-Jitsu training journal. Locally hosted. Built for Purple Belt, 2 Stripes.
+Personal Brazilian Jiu-Jitsu training journal. Built for Purple Belt, 2 Stripes.
+
+## Production
+
+- App: https://bjj-notebook.com (Cloudflare Workers static assets, project `bjj-notebook`, deploys from `main`)
+- API: https://bjj-tracker-api-lc3n.onrender.com (Render web service `bjj-tracker-api`, deploys from `main`, SQLite on a persistent disk)
+- Sign-in emails: Resend via `send.bjj-notebook.com`
 
 ## Stack
 - **Backend:** FastAPI + SQLite + SQLAlchemy
