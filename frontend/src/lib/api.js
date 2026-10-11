@@ -43,6 +43,9 @@ export const requestAuthLink = (email) => api.post("/auth/request-link", { email
 export const consumeAuthLink = (token) => api.post("/auth/consume-link", { token });
 export const logout = () => api.post("/auth/logout");
 export const getMe = () => api.get("/auth/me");
+export const listApiKeys = () => api.get("/auth/api-keys");
+export const createApiKey = (name) => api.post("/auth/api-keys", { name });
+export const revokeApiKey = (id) => api.delete(`/auth/api-keys/${id}`);
 export const bootstrapWorkspace = (data) => api.post("/workspaces/bootstrap", data);
 export const getCurrentWorkspace = () => api.get("/workspaces/current");
 export const getInvite = (code) => api.get(`/workspaces/invites/${code}`);

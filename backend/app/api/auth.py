@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session as DBSession
 
 from app import config, models, schemas, security
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_session_user
 from app.db import get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -103,3 +103,60 @@ def me(
         .first()
     )
     return {"user": current_user, "memberships": memberships, "profile": profile}
+
+
+@router.post("/api-keys", response_model=schemas.ApiKeyCreateResponse, status_code=201)
+def create_api_key(
+    data: schemas.ApiKeyCreate,
+    current_user: models.User = Depends(get_session_user),
+    db: DBSession = Depends(get_db),
+):
+    raw_key = security.generate_api_key()
+    key = models.ApiKey(
+        user_id=current_user.user_id,
+        name=data.name.strip(),
+        key_hash=security.hash_api_key(raw_key),
+        key_prefix=raw_key[:10],
+    )
+    db.add(key)
+    db.commit()
+    db.refresh(key)
+    return {**schemas.ApiKeyResponse.model_validate(key).model_dump(), "api_key": raw_key}
+
+
+@router.get("/api-keys", response_model=list[schemas.ApiKeyResponse])
+def list_api_keys(
+    current_user: models.User = Depends(get_session_user),
+    db: DBSession = Depends(get_db),
+):
+    return (
+        db.query(models.ApiKey)
+        .filter(
+            models.ApiKey.user_id == current_user.user_id,
+            models.ApiKey.revoked_at.is_(None),
+        )
+        .order_by(models.ApiKey.created_at.desc())
+        .all()
+    )
+
+
+@router.delete("/api-keys/{key_id}")
+def revoke_api_key(
+    key_id: str,
+    current_user: models.User = Depends(get_session_user),
+    db: DBSession = Depends(get_db),
+):
+    key = (
+        db.query(models.ApiKey)
+        .filter(
+            models.ApiKey.key_id == key_id,
+            models.ApiKey.user_id == current_user.user_id,
+            models.ApiKey.revoked_at.is_(None),
+        )
+        .first()
+    )
+    if not key:
+        raise HTTPException(status_code=404, detail="API key not found")
+    key.revoked_at = security.now()
+    db.commit()
+    return {"message": "API key revoked."}

@@ -12,8 +12,18 @@ ModelT = TypeVar("ModelT")
 
 def get_current_user(
     x_session_token: str = Header(default=None),
+    authorization: str = Header(default=None),
     db: DBSession = Depends(get_db),
 ) -> models.User:
+    """Session token or personal API key."""
+    return security.resolve_user(db, x_session_token, authorization)
+
+
+def get_session_user(
+    x_session_token: str = Header(default=None),
+    db: DBSession = Depends(get_db),
+) -> models.User:
+    """Interactive session only; API keys are rejected (used for key management)."""
     return security.resolve_session(db, x_session_token).user
 
 
