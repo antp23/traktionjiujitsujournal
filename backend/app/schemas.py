@@ -1,6 +1,7 @@
 """Pydantic request/response contracts. These are the frozen v1 API shapes;
 legacy enum spellings (`no_gi`, `win`, `loss`, `competitive`) stay accepted
 so pre-auth seed data keeps serializing."""
+import datetime as dt
 from datetime import date, datetime
 from typing import List, Literal, Optional
 
@@ -39,7 +40,7 @@ class SessionCreate(SessionBase):
 
 
 class SessionUpdate(BaseModel):
-    date: Optional[date] = None
+    date: Optional[dt.date] = None
     session_type: Optional[SessionType] = None
     gym_location: Optional[str] = None
     instructor: Optional[str] = None
@@ -460,3 +461,22 @@ class ParseResponse(BaseModel):
     action: Optional[str] = None
     message: str = ""
     data: Optional[dict] = None
+
+
+# ── API access keys ──────────────────────────────────────────────────────────
+
+class ApiKeyCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+
+
+class ApiKeyResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    key_id: str
+    name: str
+    key_prefix: str
+    created_at: datetime
+    last_used_at: Optional[datetime] = None
+
+
+class ApiKeyCreateResponse(ApiKeyResponse):
+    api_key: str

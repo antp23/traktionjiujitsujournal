@@ -1,5 +1,7 @@
 """Authentication primitives: magic links, session tokens, throttling,
 and sign-in email delivery."""
+import hashlib
+import secrets
 import smtplib
 from datetime import datetime, timedelta
 from email.message import EmailMessage
@@ -112,3 +114,52 @@ def resolve_session(db: DBSession, session_token: str | None) -> models.AuthToke
     if token.expires_at <= now():
         raise HTTPException(status_code=401, detail="Expired session token")
     return token
+
+
+API_KEY_PREFIX = "bjj_"
+
+
+def generate_api_key() -> str:
+    return API_KEY_PREFIX + secrets.token_urlsafe(32)
+
+
+def hash_api_key(raw_key: str) -> str:
+    return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+
+
+def resolve_api_key(db: DBSession, raw_key: str) -> models.ApiKey:
+    """Validate a personal API key and stamp last_used_at."""
+    key = (
+        db.query(models.ApiKey)
+        .filter(models.ApiKey.key_hash == hash_api_key(raw_key))
+        .first()
+    )
+    if not key or key.revoked_at is not None or not key.user:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    key.last_used_at = now()
+    db.commit()
+    return key
+
+
+def bearer_token(authorization: str | None) -> str | None:
+    if not authorization:
+        return None
+    scheme, _, value = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not value.strip():
+        return None
+    return value.strip()
+
+
+def resolve_user(
+    db: DBSession, session_token: str | None, authorization: str | None
+) -> models.User:
+    """Resolve the caller from a session token or a personal API key.
+
+    API keys are accepted as `Authorization: Bearer bjj_...` or in the
+    X-Session-Token header."""
+    bearer = bearer_token(authorization)
+    if bearer and bearer.startswith(API_KEY_PREFIX):
+        return resolve_api_key(db, bearer).user
+    if session_token and session_token.startswith(API_KEY_PREFIX):
+        return resolve_api_key(db, session_token).user
+    return resolve_session(db, session_token or bearer).user

@@ -4,6 +4,7 @@ import { Building2, Copy, Inbox, ShieldCheck, Target, UserRound, UserRoundPlus }
 import { getCurrentWorkspace } from "../lib/api";
 import { useAuth } from "../lib/authContext";
 import LoadingSpinner from "../components/LoadingSpinner";
+import ApiKeysPanel from "../components/ApiKeysPanel";
 
 export default function TeamWorkspace() {
   const { user, profile, memberships } = useAuth();
@@ -122,6 +123,8 @@ export default function TeamWorkspace() {
           </section>
         </>
       )}
+
+      <ApiKeysPanel />
     </div>
   );
 }

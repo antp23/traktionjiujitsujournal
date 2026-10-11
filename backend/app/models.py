@@ -191,6 +191,23 @@ class AuthToken(Base):
     user = relationship("User")
 
 
+class ApiKey(Base):
+    """Personal API access key. Only a SHA-256 hash of the secret is stored;
+    keys never expire and are revoked by setting revoked_at."""
+    __tablename__ = "api_keys"
+
+    key_id = Column(String, primary_key=True, default=new_uuid)
+    user_id = Column(String, ForeignKey("users.user_id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    key_hash = Column(String, nullable=False, unique=True, index=True)
+    key_prefix = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_used_at = Column(DateTime, nullable=True)
+    revoked_at = Column(DateTime, nullable=True)
+
+    user = relationship("User")
+
+
 class GymWorkspace(Base):
     __tablename__ = "gym_workspaces"
 
