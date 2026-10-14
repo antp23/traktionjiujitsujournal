@@ -1,5 +1,5 @@
 """Training session log."""
-from datetime import date
+from datetime import date, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -63,6 +63,53 @@ def session_stats(
     db: DBSession = Depends(get_db),
 ):
     return stats.session_stats_for_owner(db, current_user.user_id)
+
+
+ROAD_START = date(2026, 10, 12)
+ROAD_GOAL_DATE = date(2027, 4, 25)
+ROAD_TOTAL_HOURS = 150.0
+ROAD_MILESTONES = [(75.0, "4th stripe"), (150.0, "Brown belt test")]
+
+
+@router.get("/stats/road-to-brown")
+def road_to_brown(
+    today: Optional[date] = None,
+    current_user: models.User = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """Hours logged since the 3rd stripe toward the 150h brown belt test."""
+    today = today or date.today()
+    rows = db.query(models.Session.date, models.Session.duration_minutes).filter(
+        models.Session.owner_user_id == current_user.user_id,
+        models.Session.attended.is_(True),
+        models.Session.date >= ROAD_START,
+        models.Session.date <= today,
+    ).all()
+    hours = round(sum((m or 0) for _, m in rows) / 60.0, 2)
+    window_start = today - timedelta(days=27)
+    recent = sum((m or 0) for d, m in rows if d >= window_start) / 60.0
+    next_ms = next(({"hours": h, "label": l} for h, l in ROAD_MILESTONES if hours < h), None)
+    weeks_left = max((ROAD_GOAL_DATE - today).days, 0) / 7.0
+    remaining_total = max(ROAD_TOTAL_HOURS - hours, 0.0)
+    if remaining_total == 0:
+        needed = 0.0
+    elif weeks_left > 0:
+        needed = round(remaining_total / weeks_left, 2)
+    else:
+        needed = None
+    return {
+        "start_date": ROAD_START.isoformat(),
+        "goal_date": ROAD_GOAL_DATE.isoformat(),
+        "total_hours": ROAD_TOTAL_HOURS,
+        "hours_logged": hours,
+        "milestones": [{"hours": h, "label": l, "reached": hours >= h} for h, l in ROAD_MILESTONES],
+        "next_milestone": next_ms,
+        "hours_to_next_milestone": round(next_ms["hours"] - hours, 2) if next_ms else 0.0,
+        "hours_remaining": round(remaining_total, 2),
+        "weeks_until_goal": round(weeks_left, 1),
+        "weekly_pace_needed": needed,
+        "four_week_avg_pace": round(recent / 4.0, 2),
+    }
 
 
 @router.get("/{session_id}", response_model=schemas.SessionResponse)
