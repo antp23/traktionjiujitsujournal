@@ -59,6 +59,7 @@ export const createSession = (data) => api.post("/sessions", data);
 export const updateSession = (id, data) => api.put(`/sessions/${id}`, data);
 export const deleteSession = (id) => api.delete(`/sessions/${id}`);
 export const getSessionStats = () => api.get("/sessions/stats/summary");
+export const getRoadToBrown = () => api.get("/sessions/stats/road-to-brown");
 
 // Techniques
 export const getTechniques = (params) => api.get("/techniques", { params });

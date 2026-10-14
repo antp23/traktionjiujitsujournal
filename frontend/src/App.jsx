@@ -17,6 +17,7 @@ import Login from "./pages/Login";
 import JoinWorkspace from "./pages/JoinWorkspace";
 import Onboarding from "./pages/Onboarding";
 import Goals from "./pages/Goals";
+import RoadToBrown from "./pages/RoadToBrown";
 import SharedInbox from "./pages/SharedInbox";
 import SetupWorkspace from "./pages/SetupWorkspace";
 import TeamWorkspace from "./pages/TeamWorkspace";
@@ -55,6 +56,7 @@ function ProtectedApp() {
         <Route path="/techniques/:id/edit" element={<TechniqueForm />} />
         <Route path="/rolls" element={<Rolls />} />
         <Route path="/progress" element={<Progress />} />
+        <Route path="/road-to-brown" element={<RoadToBrown />} />
         <Route path="/goals" element={<Goals />} />
         <Route path="/team" element={<TeamWorkspace />} />
         <Route path="/notes" element={<Notes />} />
